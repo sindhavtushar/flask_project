@@ -2,159 +2,57 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: "Poppins", sans-serif;
-        }
-
-        body {
-            min-height: 100vh;
-            padding: 30px;
-            background: linear-gradient(135deg, #1d1d1f, #2b2b2f, #3b3b40);
-            background-size: 400% 400%;
-            animation: gradientBG 12s ease infinite;
-            color: #fff;
-        }
-
-        @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        /* Logout Button */
-        .logout-container {
-            text-align: right;
-            margin-bottom: 20px;
-        }
-
-        .logout-btn {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #ff4b4b, #ff6b6b);
-            color: #fff;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(255, 80, 80, 0.3);
-            transition: 0.3s;
-        }
-
-        .logout-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(255, 80, 80, 0.5);
-        }
-
-        /* Dashboard Card */
-        .dashboard-box {
-            max-width: 850px;
-            margin: 0 auto;
-            padding: 30px;
-            border-radius: 20px;
-            backdrop-filter: blur(15px);
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
-        }
-
-        h2 {
-            text-align: center;
-            font-size: 30px;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-
-        h3 {
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 20px;
-            color: #dcdcdc;
-        }
-
-        /* Table Styling */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            border-radius: 12px;
-            overflow: hidden;
-        }
-
-        thead {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(5px);
-        }
-
-        thead th {
-            padding: 15px;
-            font-size: 16px;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        tbody tr {
-            background: rgba(255, 255, 255, 0.05);
-            transition: 0.2s;
-        }
-
-        tbody tr:nth-child(even) {
-            background: rgba(255, 255, 255, 0.09);
-        }
-
-        tbody tr:hover {
-            background: rgba(255, 255, 255, 0.18);
-            transform: scale(1.01);
-        }
-
-        td {
-            padding: 15px;
-            text-align: center;
-            font-size: 15px;
-            color: #eaeaea;
-        }
-
-    </style>
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    <div class="container">
+        <div style="text-align:right;">
+            <a href="{{ url_for('logout') }}">
+                <button>Logout</button>
+            </a>
+        </div>
 
-    <!-- Logout -->
-    <div class="logout-container">
-        <a href="{{ url_for('logout') }}">
-            <button class="logout-btn">Logout</button>
-        </a>
-    </div>
+        <h2>Welcome {{ user['username'] }}</h2>
+        <h3>Your Timesheet</h3>
 
-    <!-- Dashboard Content -->
-    <div class="dashboard-box">
-        <h2>Welcome</h2>
-        <h3>All Registered Members</h3>
-
-        <table>
-            <thead>
+        <h2>Your Attendance Logs</h2>
+        {% if logs|length == 0 %}
+            <p>No logs found. Add your first entry!</p>
+        {% else %}
+            <table>
                 <tr>
-                    <th>ID</th>
-                    <th>Name</th>
+                    <th>Date</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Task</th>
+                    <th>Delete</th>
                 </tr>
-            </thead>
-
-            <tbody>
-                {% for user in users %}
+                {% for log in logs %}
                 <tr>
-                    <td>{{ user['id'] }}</td>
-                    <td>{{ user['username'] }}</td>
+                    <td>{{ log['date'] }}</td>
+                    <td>{{ log['clockIn'] }}</td>
+                    <td>{{ log['clockOut'] }}</td>
+                    <td>{{ log['tasks'] }}</td>
+                    <td>
+                        <form action="{{ url_for('delete_log', log_id=log['SNO']) }}" method="POST"
+                              onsubmit="return confirm('Delete this entry?')">
+                            <button>Delete</button>
+                        </form>
+                    </td>
                 </tr>
                 {% endfor %}
-            </tbody>
+            </table>
+        {% endif %}
 
-        </table>
+        <h3>Add New Entry</h3>
+        <form method="POST">
+            <input type="date" name="date" required>
+            <input type="time" name="clockIn" required>
+            <input type="time" name="clockOut" required>
+            <textarea name="tasks" placeholder="Task description..." required></textarea>
+            <button type="submit">Add</button>
+        </form>
     </div>
-
 </body>
 </html>
