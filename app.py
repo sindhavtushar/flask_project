@@ -1,137 +1,182 @@
-# Application factory pattern
-# app.py
-
 import secrets
-import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, session, g
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, flash, render_template, request, redirect, url_for, session, g
+from db_manager import TimesheetDB
 
-# from dbconnection import get_all_logs
 
-# Define a function that creates and configures the application
 def create_app():
     app = Flask(__name__)
-    # Set the secret key and the database path in the config
     app.secret_key = secrets.token_hex()
-    app.config['DATABASE'] = 'Log_Tracker.db'
-    
-    # Import the db setup function *inside* the factory function
-    from dbconnection import init_app_db, get_db
-    init_app_db(app) # Register the teardown handling
 
-    # --- Routes ---
+    # ---------- DATABASE HANDLER ----------
+    def get_db_conn():
+        if 'db' not in g:
+            g.db = TimesheetDB()
+        return g.db
 
+    @app.teardown_appcontext
+    def close_db(exception):
+        db = g.pop('db', None)
+        if db is not None:
+            db.close()
+
+    # ---------- ROUTES ----------
     @app.route('/')
-    def index():
+    def home():
         return render_template('home.html')
 
-    @app.route('/registerpage', methods=['GET', 'POST'])
-    def register():
+    @app.route('/register', methods=['GET', 'POST'])
+    def register_user():
         if request.method == 'POST':
             username = request.form['username']
             password = request.form['password']
-            hashed_password = generate_password_hash(password)
 
-            db = get_db() # Use get_db() within the request context
-            try:
-                db.execute("INSERT INTO users (username, password) VALUES (?, ?)",
-                           (username, hashed_password))
-                db.commit()
-                return redirect(url_for('login'))
-            except sqlite3.IntegrityError:
-                return "Username already exists!"
+            db = get_db_conn()
+            success, msg = db.register_user(username, password)
+
+            if success:
+                return redirect(url_for('login_user'))
+            return f'Registration failed: {msg}'
+
         return render_template('registerpage.html')
 
-    @app.route('/loginpage', methods=['GET', 'POST'])
-    def login():
-
+    @app.route('/login', methods=['GET', 'POST'])
+    def login_user():
         if 'user_id' in session:
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('dashboard_view'))
 
         if request.method == 'POST':
             username = request.form['username']
             password = request.form['password']
 
-            db = get_db() # Use get_db() within the request context
-            user = db.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+            db = get_db_conn()
+            data = db.login_user(username, password)
 
-            if user and check_password_hash(user['password'], password):
-                session['user_id'] = user['user_id']
-                return redirect(url_for('dashboard'))
-            else:
-                return "Invalid username or password"
+            if data:
+                user_id, role = data
+                session['user_id'] = user_id
+                session['user_role'] = role
+                session['username'] = username
+                return redirect(url_for('dashboard_view'))
+
+            return "Invalid username or password!"
+
         return render_template('loginpage.html')
 
     @app.route('/dashboard', methods=['GET', 'POST'])
-    def dashboard():
+    def dashboard_view():
         if 'user_id' not in session:
-            return redirect(url_for('login'))
+            flash("Please login first!")
+            return redirect(url_for('login_user'))
 
-        db = get_db()
-        db.row_factory = sqlite3.Row
+        user_id = session['user_id']
+        user_role = session['user_role']
+        db = get_db_conn()
 
-        if request.method == 'POST':
-            date = request.form.get('date')
-            clockIn = request.form.get('clockIn')
-            clockOut = request.form.get('clockOut')
-            tasks = request.form.get('tasks')
+        # ----- Handle new personal log entry -----
+        if request.method == 'POST' and 'date' in request.form and 'user_id' not in request.form:
+            date = request.form['date']
+            clock_in = request.form['clock_in']
+            clock_out = request.form['clock_out']
+            task_description = request.form['task_description']
 
-            db.execute(
-                "INSERT INTO timesheet (user_id, clockIn, clockOut, date, tasks) VALUES (?, ?, ?, ?, ?)",
-                (session['user_id'], clockIn, clockOut, date, tasks)
-            )
-            db.commit()
+            db.add_log(user_id, clock_in, clock_out, date, task_description)
+            flash("Log added successfully!")
+            return redirect(url_for('dashboard_view'))
 
-            # IMPORTANT: prevent duplicate entries on refresh
-            return redirect(url_for('dashboard'))
+        # Fetch personal logs
+        personal_logs = db.get_logs(user_id=user_id, role='user')
 
-        logs = db.execute(
-            "SELECT * FROM timesheet WHERE user_id = ?",
-            (session['user_id'],)
-        ).fetchall()
+        # ----- Senior role handling -----
+        users_list = []
+        target_user_logs = []
+        target_username = ''
 
-        user = db.execute(
-            "SELECT * FROM users WHERE user_id = ?",
-            (session['user_id'],)
-        ).fetchone()
+        if user_role == 'senior':
+            # fetch juniors
+            users_list = db.cursor.execute(
+                "SELECT user_id, username FROM user WHERE role='user'"
+            ).fetchall()
 
-        return render_template('dashboard.html', user=user, logs=logs)
+            # senior selected a junior
+            if request.method == 'POST' and 'user_id' in request.form:
+                target_user_id = int(request.form['user_id'])
+                target_user_logs = db.get_logs(
+                    user_id=user_id,
+                    role='senior',
+                    target_user_id=target_user_id
+                )
+                target_username = db.cursor.execute(
+                    "SELECT username FROM user WHERE user_id = ?",
+                    (target_user_id,)
+                ).fetchone()['username']
 
-    @app.route('/delete_log/<int:log_id>', methods=['POST'])
+        return render_template(
+            'dashboard.html',
+            user={'username': session['username']},
+            user_role=user_role,
+            logs=personal_logs,
+            users=users_list,
+            selected_user_logs=target_user_logs,
+            selected_user_name=target_username
+        )
+
+    @app.route('/logs/delete/<int:log_id>', methods=['POST'])
     def delete_log(log_id):
         if 'user_id' not in session:
-            return redirect(url_for('login'))
+            return redirect(url_for('login_user'))
 
-        db = get_db()
-
-        # Delete only if log belongs to the logged-in user
-        db.execute(
+        db = get_db_conn()
+        db.cursor.execute(
             "DELETE FROM timesheet WHERE SNO = ? AND user_id = ?",
             (log_id, session['user_id'])
         )
-        db.commit()
+        db.conn.commit()
 
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('dashboard_view'))
 
-    @app.route('/logout')
-    def logout():
+    @app.route('/logs/update/<int:log_id>', methods=['POST'])
+    def update_log(log_id):
+        if 'user_id' not in session:
+            return redirect(url_for('login_user'))
+
+        # Safer field access
+        date = request.form.get('date', '')
+        clock_in = request.form.get('clock_in', '')
+        clock_out = request.form.get('clock_out', '')
+        task_description = request.form.get('task_description', '')
+
+        db = get_db_conn()
+
+        # Authorization check
+        log = db.get_log_by_id(log_id)
+        if not log:
+            flash("Log not found!")
+            return redirect(url_for('dashboard_view'))
+
+        if log['user_id'] != session['user_id'] and session.get('user_role') != 'senior':
+            flash("Unauthorized access!")
+            return redirect(url_for('dashboard_view'))
+
+        # Update
+        db.update_log(log_id, clock_in, clock_out, date, task_description)
+
+        flash("Log updated successfully!")
+        return redirect(url_for('dashboard_view'))
+
+
+    @app.route('/logout', methods=['GET', 'POST'])
+    def logout_user():
         session.pop('user_id', None)
-        return redirect(url_for('index'))
-    
-    # Return the configured app instance
+        session.pop('user_role', None)
+        session.pop('username', None)
+        return redirect(url_for('home'))
+
     return app
 
-# --- Main execution block ---
 
+# -------- RUN SERVER --------
 if __name__ == '__main__':
-    # 1. Create the application instance
     app_instance = create_app()
-
-    # 2. To initialize the database schema *once* before running,
-    # we use an application context manually.
-    with app_instance.app_context():
-        from dbconnection import init_db
-        init_db() # Call init_db using the corrected dbconnection.py logic
-
-    # 3. Run the application instance
-    app_instance.run(debug=True, host='0.0.0.0', port=5000)
+    app_instance.run()
+    
+    # app_instance.run(debug=True, host='0.0.0.0', port=5000)

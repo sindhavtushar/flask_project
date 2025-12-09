@@ -3,56 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <title>Dashboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body>
+    <nav class="navbar navbar-dark bg-dark">
+        <!-- Navbar content -->
+    </nav>
+
     <div class="container">
+
+        <!-- Top Right User / Logout -->
         <div style="text-align:right;">
-            <a href="{{ url_for('logout') }}">
-                <button>Logout</button>
-            </a>
+            <button>{{ user.get('username', 'Guest') }}</button>
+            <form action="{{ url_for('logout_user') }}" method="POST" style="display:inline;">
+                <button type="submit" class="log-out-btn">Logout</button>
+            </form>
         </div>
 
-        <h2>Welcome {{ user['username'] }}</h2>
-        <h3>Your Timesheet</h3>
-
-        <h2>Your Attendance Logs</h2>
-        {% if logs|length == 0 %}
-            <p>No logs found. Add your first entry!</p>
+        <!-- Greetings -->
+        {% if user_role == 'senior' %}
+            <h2>Welcome, Senior!</h2>
         {% else %}
-            <table>
+            <h2>Welcome IT Staff!</h2>
+        {% endif %}
+
+        <!-- Toggle Timesheet Button -->
+        <button id="show-timesheet-btn">See My Timesheet</button>
+
+        <!-- Personal Timesheet Section -->
+        <div id="timesheet-section" style="display:none;">
+            {% if logs|length == 0 %}
+                <p>No logs found. Add your first entry!</p>
+            {% else %}
+            <table cellspacing="0" cellpadding="5">
                 <tr>
                     <th>Date</th>
                     <th>Check In</th>
                     <th>Check Out</th>
                     <th>Task</th>
                     <th>Delete</th>
+                    <th>Update</th>
                 </tr>
+
                 {% for log in logs %}
                 <tr>
                     <td>{{ log['date'] }}</td>
-                    <td>{{ log['clockIn'] }}</td>
-                    <td>{{ log['clockOut'] }}</td>
-                    <td>{{ log['tasks'] }}</td>
+                    <td>{{ log['clock_in'] }}</td>
+                    <td>{{ log['clock_out'] }}</td>
+                    <td>{{ log['task_description'] }}</td>
+
                     <td>
                         <form action="{{ url_for('delete_log', log_id=log['SNO']) }}" method="POST"
                               onsubmit="return confirm('Delete this entry?')">
                             <button>Delete</button>
                         </form>
                     </td>
+
+                    <td>
+                        <button type="button" class="toggle-update-btn" data-logid="{{ log['SNO'] }}">Update</button>
+                    </td>
+                </tr>
+
+                <!-- Hidden Update Form -->
+                <tr id="update-form-{{ log['SNO'] }}" style="display:none;">
+                    <td colspan="6">
+                        <form action="{{ url_for('update_log', log_id=log['SNO']) }}" method="POST"
+                              onsubmit="return confirm('Update this entry?')">
+                            <input type="date" name="date" value="{{ log['date'] }}" required>
+                            <input type="time" name="clock_in" value="{{ log['clock_in'] }}" required>
+                            <input type="time" name="clock_out" value="{{ log['clock_out'] }}" required>
+                            <textarea name="task_description" required>{{ log['task_description'] }}</textarea>
+                            <button type="submit">Save</button>
+                            <button type="button" class="cancel-update-btn" data-logid="{{ log['SNO'] }}">Cancel</button>
+                        </form>
+                    </td>
                 </tr>
                 {% endfor %}
             </table>
+            {% endif %}
+
+            <!-- Add New Entry Form -->
+            <h3>Add New Entry</h3>
+            <form method="POST">
+                <input type="date" name="date" required>
+                <input type="time" name="clock_in" required>
+                <input type="time" name="clock_out" required>
+                <textarea name="task_description" placeholder="Task description..." required></textarea>
+                <button type="submit">Add</button>
+            </form>
+        </div>
+
+
+        <!-- SENIOR SECTION -->
+        {% if user_role == 'senior' %}
+        <h3>View User Timesheet</h3>
+        <form method="POST">
+            <select name="user_id" required>
+                <!-- Default placeholder option -->
+                <option value="" disabled selected>Select Users</option>
+                
+                {% for u in users %}
+                <option value="{{ u['user_id'] }}">{{ u['username'] }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">View</button>
+        </form>
         {% endif %}
 
-        <h3>Add New Entry</h3>
-        <form method="POST">
-            <input type="date" name="date" required>
-            <input type="time" name="clockIn" required>
-            <input type="time" name="clockOut" required>
-            <textarea name="tasks" placeholder="Task description..." required></textarea>
-            <button type="submit">Add</button>
-        </form>
+
+        {% if selected_user_logs|length > 0 %}
+        <div id="selected-user-section">
+            <button id="toggle-selected-user-btn">Hide User Timesheet</button>
+            <div id="selected-user-logs" style="display:block;">
+                <h4>Timesheet of {{ selected_user_name }}</h4>
+                <table border="1" cellspacing="0" cellpadding="5">
+                    <tr>
+                        <th>Date</th>
+                        <th>Check In</th>
+                        <th>Check Out</th>
+                        <th>Task</th>
+                    </tr>
+                    {% for log in selected_user_logs %}
+                    <tr>
+                        <td>{{ log['date'] }}</td>
+                        <td>{{ log['clock_in'] }}</td>
+                        <td>{{ log['clock_out'] }}</td>
+                        <td>{{ log['task_description'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
     </div>
+
+    <!-- Scripts -->
+    <script>
+        // Toggle Personal Timesheet
+        const myBtn = document.getElementById('show-timesheet-btn');
+        const mySection = document.getElementById('timesheet-section');
+        myBtn.addEventListener('click', () => {
+            mySection.style.display = (mySection.style.display === 'none' || mySection.style.display === '') ? 'block' : 'none';
+            myBtn.textContent = mySection.style.display === 'block' ? 'Hide Timesheet' : 'See My Timesheet';
+        });
+
+        // Toggle Selected User Timesheet (Senior Only)
+        const toggleUserBtn = document.getElementById('toggle-selected-user-btn');
+        const userSection = document.getElementById('selected-user-logs');
+        if (toggleUserBtn) {
+            toggleUserBtn.addEventListener('click', () => {
+                userSection.style.display = (userSection.style.display === 'none' || userSection.style.display === '') ? 'block' : 'none';
+                toggleUserBtn.textContent = userSection.style.display === 'block' ? 'Hide User Timesheet' : 'Show User Timesheet';
+            });
+        }
+
+        // Toggle Update Forms
+        document.querySelectorAll('.toggle-update-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const logId = button.dataset.logid;
+                const formRow = document.getElementById('update-form-' + logId);
+                formRow.style.display = (formRow.style.display === 'none' || formRow.style.display === '') ? 'table-row' : 'none';
+            });
+        });
+
+        document.querySelectorAll('.cancel-update-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const logId = button.dataset.logid;
+                document.getElementById('update-form-' + logId).style.display = 'none';
+            });
+        });
+    </script>
 </body>
+
+
 </html>
