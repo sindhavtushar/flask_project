@@ -1,100 +1,81 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Register - Timesheet Tracker</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f2f5;
-        }
-        .container {
-            background-color: #fff;
-            padding: 30px 40px;
-            border-radius: 8px;
-            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
-            width: 350px;
-        }
-        h1 {
-            text-align: center;
-            margin-bottom: 10px;
-        }
-        p {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #555;
-        }
-        label {
-            display: block;
-            margin: 10px 0 5px;
-        }
-        input[type="text"],
-        input[type="password"] {
-            width: 100%;
-            padding: 8px 10px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        input[type="submit"] {
-            width: 100%;
-            padding: 10px;
-            background-color: #28a745;
-            border: none;
-            color: white;
-            font-size: 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        input[type="submit"]:hover {
-            background-color: #218838;
-        }
-        .login-link {
-            text-align: center;
-            margin-top: 15px;
-        }
-        .login-link a {
-            color: #007bff;
-            text-decoration: none;
-        }
-        .login-link a:hover {
-            text-decoration: underline;
-        }
-        .message {
-            text-align: center;
-            color: red;
-            margin-bottom: 15px;
-        }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-    <div class="container">
-        <h1>Create Account</h1>
-        <p>Register a new Timesheet account</p>
+{% block title %}Register{% endblock %}
 
-        {% if message %}
-            <div class="message">{{ message }}</div>
-        {% endif %}
+{% block content %}
+<div class="container py-4" style="max-width: 500px;">
+    <h3 class="mb-3">Create an Account</h3>
 
-        <form method="POST">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" placeholder="Enter username" required>
+    <div class="card shadow-sm">
+        <div class="card-body">
 
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="Enter password" required>
+            <form method="POST">
+                <!-- User email -->
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input 
+                        type="text" 
+                        name="email" 
+                        class="form-control" 
+                        required 
+                        value="{{ email }}">
+                </div>
 
-            <input type="submit" value="Register">
-        </form>
+                <!-- Username -->
+                <div class="mb-3">
+                    <label class="form-label">User name</label>
+                    <input 
+                        type="text" 
+                        name="username" 
+                        class="form-control" 
+                        required 
+                        value="{{ username}}">
+                </div>
 
-        <div class="login-link">
-            <p>Already registered? <a href="{{ url_for('login_user') }}">Login</a></p>
+                <!-- Password -->
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input 
+                        type="password" 
+                        name="password" 
+                        class="form-control" 
+                        required>
+                </div>
+
+                <!-- Role -->
+                <label class="form-label">Select Role</label>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input 
+                            class="form-check-input" 
+                            type="radio" 
+                            name="role" 
+                            value="senior"
+                            required
+                            {% if role == "senior" %}checked{% endif %}>
+                        <label class="form-check-label">Senior</label>
+                    </div>
+
+                    <div class="form-check">
+                        <input 
+                            class="form-check-input" 
+                            type="radio" 
+                            name="role" 
+                            value="user"
+                            {% if role == "user" %}checked{% endif %}>
+                        <label class="form-check-label">User</label>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary w-100" type="submit">Register</button>
+
+            </form>
         </div>
     </div>
 
-</body>
-</html>
+    <p class="text-center mt-3">
+        Already have an account?
+        <a href="{{ url_for('login_user') }}">Login here</a>
+    </p>
+</div>
+{% endblock %}

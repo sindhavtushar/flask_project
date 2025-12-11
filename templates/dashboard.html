@@ -1,180 +1,285 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Dashboard</title>
-</head>
+{% extends "base.html" %}
 
-<body>
-    <nav class="navbar navbar-dark bg-dark">
-        <!-- Navbar content -->
-    </nav>
+{% block title %}Dashboard | {{ user.get('username', 'Guest') }} {% endblock %}
 
-    <div class="container">
+{% block content %}
+<div class="container py-4">
 
-        <!-- Top Right User / Logout -->
-        <div style="text-align:right;">
-            <button>{{ user.get('username', 'Guest') }}</button>
-            <form action="{{ url_for('logout_user') }}" method="POST" style="display:inline;">
-                <button type="submit" class="log-out-btn">Logout</button>
-            </form>
-        </div>
+    <!-- Greetings -->
+    {% if user_role == 'senior' %}
+    <h3 class="mb-3">Welcome, Senior!</h3>
+    <h3>User: {{ user.get('username', 'Guest') }}</h3>
+    {% else %}
+    <h3 class="mb-3">Welcome IT Staff!</h3>
+    <h3>User: {{ user.get('username', 'Guest') }}</h3>
+    {% endif %}
 
-        <!-- Greetings -->
-        {% if user_role == 'senior' %}
-            <h2>Welcome, Senior!</h2>
-        {% else %}
-            <h2>Welcome IT Staff!</h2>
-        {% endif %}
+    <!-- Personal Timesheet -->
+    <h4 class="mt-4 mb-3">Your Timesheet </h4> <!--of {{ user.get('username', 'Guest') }}</h4> -->
 
-        <!-- Toggle Timesheet Button -->
-        <button id="show-timesheet-btn">See My Timesheet</button>
-
-        <!-- Personal Timesheet Section -->
-        <div id="timesheet-section" style="display:none;">
-            {% if logs|length == 0 %}
-                <p>No logs found. Add your first entry!</p>
-            {% else %}
-            <table cellspacing="0" cellpadding="5">
+    {% if logs|length == 0 %}
+    <p>No logs found. Add your first entry!</p>
+    <!-- Excel-style ADD NEW ENTRY row -->
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+            <thead class="table-light">
                 <tr>
                     <th>Date</th>
                     <th>Check In</th>
                     <th>Check Out</th>
                     <th>Task</th>
+                    <th>Work Hours</th>
                     <th>Delete</th>
                     <th>Update</th>
                 </tr>
+            </thead>
+            <tbody>
+                <tr class="table-light">
+                    <form method="POST" class="align-middle">
 
+                        <td>
+                            <input type="date" name="date" class="form-control" required>
+                        </td>
+
+                        <td>
+                            <input type="time" name="clock_in" class="form-control" required>
+                        </td>
+
+                        <td>
+                            <input type="time" name="clock_out" class="form-control" required>
+                        </td>
+
+                        <td>
+                            <textarea name="task_description"
+                                        class="form-control"
+                                        placeholder="Task description..."
+                                        required></textarea>
+                        </td>
+
+                        <td class="text-muted text-center">auto</td>
+
+                        <td colspan="2">
+                            <button type="submit" class="btn btn-success w-100">
+                                Add Entry
+                            </button>
+                        </td>
+
+                    </form>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Task</th>
+                    <th>Work Hours</th>
+                    <th>Delete</th>
+                    <th>Update</th>
+                </tr>
+            </thead>
+
+            <tbody>
                 {% for log in logs %}
                 <tr>
                     <td>{{ log['date'] }}</td>
                     <td>{{ log['clock_in'] }}</td>
                     <td>{{ log['clock_out'] }}</td>
                     <td>{{ log['task_description'] }}</td>
+                    <td>{{ log['workhour'] }}</td>
 
                     <td>
-                        <form action="{{ url_for('delete_log', log_id=log['SNO']) }}" method="POST"
+                        <form action="{{ url_for('delete_log', log_id=log['SNO']) }}"
+                              method="POST"
                               onsubmit="return confirm('Delete this entry?')">
-                            <button>Delete</button>
+                            <button class="btn btn-danger btn-sm">Delete</button>
                         </form>
                     </td>
 
                     <td>
-                        <button type="button" class="toggle-update-btn" data-logid="{{ log['SNO'] }}">Update</button>
+                        <button type="button"
+                                class="btn btn-primary btn-sm toggle-update-btn"
+                                data-logid="{{ log['SNO'] }}">
+                            Update
+                        </button>
                     </td>
                 </tr>
 
-                <!-- Hidden Update Form -->
+                <!-- Hidden update form row -->
                 <tr id="update-form-{{ log['SNO'] }}" style="display:none;">
-                    <td colspan="6">
-                        <form action="{{ url_for('update_log', log_id=log['SNO']) }}" method="POST"
-                              onsubmit="return confirm('Update this entry?')">
-                            <input type="date" name="date" value="{{ log['date'] }}" required>
-                            <input type="time" name="clock_in" value="{{ log['clock_in'] }}" required>
-                            <input type="time" name="clock_out" value="{{ log['clock_out'] }}" required>
-                            <textarea name="task_description" required>{{ log['task_description'] }}</textarea>
-                            <button type="submit">Save</button>
-                            <button type="button" class="cancel-update-btn" data-logid="{{ log['SNO'] }}">Cancel</button>
+                    <td colspan="7">
+                        <form action="{{ url_for('update_log', log_id=log['SNO']) }}"
+                              method="POST"
+                              class="row g-2">
+
+                            <div class="col-md-2">
+                                <input type="date" name="date"
+                                       class="form-control"
+                                       value="{{ log['date'] }}" required>
+                            </div>
+
+                            <div class="col-md-2">
+                                <input type="time" name="clock_in"
+                                       class="form-control"
+                                       value="{{ log['clock_in'] }}" required>
+                            </div>
+
+                            <div class="col-md-2">
+                                <input type="time" name="clock_out"
+                                       class="form-control"
+                                       value="{{ log['clock_out'] }}" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <textarea name="task_description"
+                                          class="form-control"
+                                          required>{{ log['task_description'] }}</textarea>
+                            </div>
+
+                            <div class="col-md-2 d-flex gap-2">
+                                <button type="submit" class="btn btn-success btn-sm w-50">Save</button>
+                                <button type="button"
+                                        class="btn btn-secondary btn-sm w-50 cancel-update-btn"
+                                        data-logid="{{ log['SNO'] }}">Cancel</button>
+                            </div>
+
                         </form>
                     </td>
                 </tr>
                 {% endfor %}
-            </table>
-            {% endif %}
 
-            <!-- Add New Entry Form -->
-            <h3>Add New Entry</h3>
-            <form method="POST">
-                <input type="date" name="date" required>
-                <input type="time" name="clock_in" required>
-                <input type="time" name="clock_out" required>
-                <textarea name="task_description" placeholder="Task description..." required></textarea>
-                <button type="submit">Add</button>
-            </form>
-        </div>
+                <!-- Excel-style ADD NEW ENTRY row -->
+                <tr class="table-light">
+                    <form method="POST" class="align-middle">
 
+                        <td>
+                            <input type="date" name="date" class="form-control" required>
+                        </td>
 
-        <!-- SENIOR SECTION -->
-        {% if user_role == 'senior' %}
-        <h3>View User Timesheet</h3>
-        <form method="POST">
-            <select name="user_id" required>
-                <!-- Default placeholder option -->
-                <option value="" disabled selected>Select Users</option>
-                
+                        <td>
+                            <input type="time" name="clock_in" class="form-control" required>
+                        </td>
+
+                        <td>
+                            <input type="time" name="clock_out" class="form-control" required>
+                        </td>
+
+                        <td>
+                            <textarea name="task_description"
+                                      class="form-control"
+                                      placeholder="Task description..."
+                                      required></textarea>
+                        </td>
+
+                        <td class="text-muted text-center">auto</td>
+
+                        <td colspan="2">
+                            <button type="submit" class="btn btn-success w-100">
+                                Add Entry
+                            </button>
+                        </td>
+
+                    </form>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+
+    {% endif %}
+
+    <!-- SENIOR user section -->
+    {% if user_role == 'senior' %}
+    <h4 class="mt-4">View User Timesheet</h4>
+
+    <form method="POST" class="row g-2 mb-3">
+        <div class="col-md-6">
+            <select name="user_id" class="form-select" required>
+                <option value="" disabled selected>Select User</option>
                 {% for u in users %}
                 <option value="{{ u['user_id'] }}">{{ u['username'] }}</option>
                 {% endfor %}
             </select>
-            <button type="submit">View</button>
-        </form>
-        {% endif %}
+        </div>
 
+        <div class="col-md-3">
+            <button class="btn btn-primary w-100">View</button>
+        </div>
+    </form>
+    {% endif %}
 
-        {% if selected_user_logs|length > 0 %}
-        <div id="selected-user-section">
-            <button id="toggle-selected-user-btn">Hide User Timesheet</button>
-            <div id="selected-user-logs" style="display:block;">
-                <h4>Timesheet of {{ selected_user_name }}</h4>
-                <table border="1" cellspacing="0" cellpadding="5">
+    {% if selected_user_logs|length > 0 %}
+    <div class="card p-3 mb-4">
+        <button class="btn btn-outline-secondary mb-2" id="toggle-selected-user-btn">
+            Hide User Timesheet
+        </button>
+
+        <div id="selected-user-logs">
+            <h5>Timesheet of {{ selected_user_name }}</h5>
+
+            <table class="table table-bordered mt-2">
+                <thead class="table-light">
                     <tr>
                         <th>Date</th>
                         <th>Check In</th>
                         <th>Check Out</th>
                         <th>Task</th>
+                        <th>Work Hours</th>
                     </tr>
+                </thead>
+
+                <tbody>
                     {% for log in selected_user_logs %}
                     <tr>
                         <td>{{ log['date'] }}</td>
                         <td>{{ log['clock_in'] }}</td>
                         <td>{{ log['clock_out'] }}</td>
                         <td>{{ log['task_description'] }}</td>
+                        <td>{{ log['workhour'] }}</td>
                     </tr>
                     {% endfor %}
-                </table>
-            </div>
+                </tbody>
+
+            </table>
         </div>
-        {% endif %}
-
     </div>
+    {% endif %}
 
-    <!-- Scripts -->
-    <script>
-        // Toggle Personal Timesheet
-        const myBtn = document.getElementById('show-timesheet-btn');
-        const mySection = document.getElementById('timesheet-section');
-        myBtn.addEventListener('click', () => {
-            mySection.style.display = (mySection.style.display === 'none' || mySection.style.display === '') ? 'block' : 'none';
-            myBtn.textContent = mySection.style.display === 'block' ? 'Hide Timesheet' : 'See My Timesheet';
-        });
+</div>
 
-        // Toggle Selected User Timesheet (Senior Only)
-        const toggleUserBtn = document.getElementById('toggle-selected-user-btn');
-        const userSection = document.getElementById('selected-user-logs');
-        if (toggleUserBtn) {
-            toggleUserBtn.addEventListener('click', () => {
-                userSection.style.display = (userSection.style.display === 'none' || userSection.style.display === '') ? 'block' : 'none';
-                toggleUserBtn.textContent = userSection.style.display === 'block' ? 'Hide User Timesheet' : 'Show User Timesheet';
-            });
-        }
+<!-- JS for toggle rows -->
+<script>
+document.querySelectorAll('.toggle-update-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const id = btn.dataset.logid;
+        const row = document.getElementById('update-form-' + id);
+        row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+    });
+});
 
-        // Toggle Update Forms
-        document.querySelectorAll('.toggle-update-btn').forEach(button => {
-            button.addEventListener('click', () => {
-                const logId = button.dataset.logid;
-                const formRow = document.getElementById('update-form-' + logId);
-                formRow.style.display = (formRow.style.display === 'none' || formRow.style.display === '') ? 'table-row' : 'none';
-            });
-        });
+document.querySelectorAll('.cancel-update-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const id = btn.dataset.logid;
+        const row = document.getElementById('update-form-' + id);
+        row.style.display = 'none';
+    });
+});
 
-        document.querySelectorAll('.cancel-update-btn').forEach(button => {
-            button.addEventListener('click', () => {
-                const logId = button.dataset.logid;
-                document.getElementById('update-form-' + logId).style.display = 'none';
-            });
-        });
-    </script>
-</body>
-
-
-</html>
+const toggleBtn = document.getElementById('toggle-selected-user-btn');
+if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+        const section = document.getElementById('selected-user-logs');
+        section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        toggleBtn.textContent = section.style.display === 'none' 
+            ? "Show User Timesheet"
+            : "Hide User Timesheet";
+    });
+}
+</script>
+{% endblock %}
