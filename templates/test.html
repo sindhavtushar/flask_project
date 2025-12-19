@@ -1,0 +1,64 @@
+<!-- <!DOCTYPE html>
+<html>
+<head>
+    <title>Test Steps</title>
+</head>
+<body>
+    <h1>Multi-step Template Example</h1>
+
+    {% if step == 1 %}
+    <div id="step1">
+        <h2>Step 1</h2>
+        <form method="POST">
+            <input type="hidden" name="step" value="1">
+            <button type="submit">Next</button>
+        </form>
+    </div>
+    {% elif step == 2 %}
+    <div id="step2">
+        <h2>Step 2</h2>
+        <form method="POST">
+            <input type="hidden" name="step" value="2">
+            <button type="submit">Next</button>
+        </form>
+    </div>
+    {% elif step == 3 %}
+    <div id="step3">
+        <h2>Step 3</h2>
+        <p>Final step content here.</p>
+    </div>
+    {% endif %}
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Registration</title>
+</head>
+<body>
+    <h1>Register</h1>
+
+    {% if message %}
+        <p style="color: green;">{{ message }}</p>
+    {% endif %}
+
+    {% if step == 1 %}
+    <form method="POST">
+        <input type="hidden" name="step" value="1">
+        <label>Username: <input type="text" name="username" required></label><br>
+        <label>Password: <input type="password" name="password" required></label><br>
+        <label>Email: <input type="email" name="email" required></label><br>
+        <button type="submit">Register</button>
+    </form>
+    {% elif step == 2 %}
+    <form method="POST">
+        <input type="hidden" name="step" value="2">
+        <label>Enter OTP: <input type="text" name="otp" required></label><br>
+        <button type="submit">Verify OTP</button>
+    </form>
+    {% elif step == 3 %}
+        <p>Registration and verification completed!</p>
+    {% endif %}
+</body>
+</html>

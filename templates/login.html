@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-start py-5">
+    <div class="card shadow-sm" style="width: 100%; max-width: 450px;">
+        <div class="card-body p-4">
+
+            <h3 class="mb-4 text-center">Login</h3>
+
+            {% if step is none %}
+            <!-- ---------- Login Form ---------- -->
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="text" id="email" name="email" class="form-control" required value="{{ email if email }}">
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" id="password" name="password" class="form-control" required>
+                </div>
+                <button class="btn btn-primary w-100" type="submit">Login</button>
+            </form>
+
+            <div class="text-center mt-3">
+                <a href="{{ url_for('login', forgot=1) }}">Forgot Password?</a>
+            </div>
+            <div class="text-center mt-2">
+                New user? <a href="{{ url_for('register') }}">Register here</a>
+            </div>
+
+            {% elif step == 'forgot_email' %}
+            <!-- ---------- Forgot Password Email Form ---------- -->
+            <h5 class="mb-3">Forgot Password</h5>
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Enter your email</label>
+                    <input type="email" id="email" name="email" class="form-control" required>
+                </div>
+                <button class="btn btn-primary w-100" type="submit">Send OTP</button>
+            </form>
+
+            {% elif step == 'forgot_otp' %}
+            <!-- ---------- OTP Verification Form ---------- -->
+            <h5 class="mb-3">Verify OTP</h5>
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="otp" class="form-label">Enter OTP</label>
+                    <input type="text" id="otp" name="otp" class="form-control" required>
+                </div>
+                <button class="btn btn-primary w-100" type="submit">Verify OTP</button>
+            </form>
+
+            {% elif step == 'forgot_reset' %}
+            <!-- ---------- Reset Password Form ---------- -->
+            <h5 class="mb-3">Reset Password</h5>
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="password" class="form-label">Enter new password</label>
+                    <input type="password" id="password" name="password" class="form-control" required>
+                </div>
+                <button class="btn btn-primary w-100" type="submit">Reset Password</button>
+            </form>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

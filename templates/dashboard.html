@@ -1,285 +1,171 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard | {{ user.get('username', 'Guest') }} {% endblock %}
+{% block title %}Dashboard - WorkLog{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container">
 
-    <!-- Greetings -->
-    {% if user_role == 'senior' %}
-    <h3 class="mb-3">Welcome, Senior!</h3>
-    <h3>User: {{ user.get('username', 'Guest') }}</h3>
-    {% else %}
-    <h3 class="mb-3">Welcome IT Staff!</h3>
-    <h3>User: {{ user.get('username', 'Guest') }}</h3>
-    {% endif %}
+    <h2>Welcome, {{ user.username }}</h2>
+    <p>Role: {{ user_role }}</p>
 
-    <!-- Personal Timesheet -->
-    <h4 class="mt-4 mb-3">Your Timesheet </h4> <!--of {{ user.get('username', 'Guest') }}</h4> -->
+    <hr>
 
-    {% if logs|length == 0 %}
-    <p>No logs found. Add your first entry!</p>
-    <!-- Excel-style ADD NEW ENTRY row -->
+    <!-- ================== ADD LOG ================== -->
+    <h3>Add Timesheet Log</h3>
+    <form method="POST" action="{{ url_for('dashboard') }}" class="mb-4">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label>Date:</label>
+                <input type="date" name="work_date" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+                <label>Clock In:</label>
+                <input type="time" name="clock_in" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+                <label>Clock Out:</label>
+                <input type="time" name="clock_out" class="form-control" required>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <label>Task Description:</label>
+            <textarea name="task_description" rows="3" class="form-control" required></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-3">Add Log</button>
+    </form>
+
+    <!-- ================== PERSONAL LOGS ================== -->
+    <h3>Your Logs</h3>
+
+    {% if logs %}
     <div class="table-responsive">
-        <table class="table table-bordered align-middle">
+        <table class="table table-bordered table-striped">
             <thead class="table-light">
                 <tr>
                     <th>Date</th>
-                    <th>Check In</th>
-                    <th>Check Out</th>
+                    <th>Clock In</th>
+                    <th>Clock Out</th>
+                    <th>Duration</th>
                     <th>Task</th>
-                    <th>Work Hours</th>
-                    <th>Delete</th>
-                    <th>Update</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr class="table-light">
-                    <form method="POST" class="align-middle">
-
-                        <td>
-                            <input type="date" name="date" class="form-control" required>
-                        </td>
-
-                        <td>
-                            <input type="time" name="clock_in" class="form-control" required>
-                        </td>
-
-                        <td>
-                            <input type="time" name="clock_out" class="form-control" required>
-                        </td>
-
-                        <td>
-                            <textarea name="task_description"
-                                        class="form-control"
-                                        placeholder="Task description..."
-                                        required></textarea>
-                        </td>
-
-                        <td class="text-muted text-center">auto</td>
-
-                        <td colspan="2">
-                            <button type="submit" class="btn btn-success w-100">
-                                Add Entry
-                            </button>
-                        </td>
-
-                    </form>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-
-    <div class="table-responsive">
-        <table class="table table-bordered align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Date</th>
-                    <th>Check In</th>
-                    <th>Check Out</th>
-                    <th>Task</th>
-                    <th>Work Hours</th>
-                    <th>Delete</th>
-                    <th>Update</th>
-                </tr>
-            </thead>
-
             <tbody>
                 {% for log in logs %}
                 <tr>
-                    <td>{{ log['date'] }}</td>
-                    <td>{{ log['clock_in'] }}</td>
-                    <td>{{ log['clock_out'] }}</td>
-                    <td>{{ log['task_description'] }}</td>
-                    <td>{{ log['workhour'] }}</td>
-
+                    <td>{{ log.work_date }}</td>
+                    <td>{{ log.clock_in }}</td>
+                    <td>{{ log.clock_out }}</td>
+                    <td>{{ log.workhour }}</td>
+                    <td>{{ log.task_description }}</td>
                     <td>
-                        <form action="{{ url_for('delete_log', log_id=log['SNO']) }}"
-                              method="POST"
-                              onsubmit="return confirm('Delete this entry?')">
-                            <button class="btn btn-danger btn-sm">Delete</button>
-                        </form>
-                    </td>
-
-                    <td>
-                        <button type="button"
-                                class="btn btn-primary btn-sm toggle-update-btn"
-                                data-logid="{{ log['SNO'] }}">
-                            Update
+                        <!-- EDIT -->
+                        <button type="button" class="btn btn-sm btn-warning mb-1"
+                            onclick="document.getElementById('edit-{{ log.id }}').style.display='block'">
+                            Edit
                         </button>
-                    </td>
-                </tr>
 
-                <!-- Hidden update form row -->
-                <tr id="update-form-{{ log['SNO'] }}" style="display:none;">
-                    <td colspan="7">
-                        <form action="{{ url_for('update_log', log_id=log['SNO']) }}"
-                              method="POST"
-                              class="row g-2">
+                        <div id="edit-{{ log.id }}" style="display:none; margin-top:10px;">
+                            <form method="POST" action="{{ url_for('update_log', log_id=log.id) }}">
+                                <input type="date" name="date" value="{{ log.work_date }}" class="form-control mb-1" required>
+                                <input type="time" name="clock_in" value="{{ log.clock_in }}" class="form-control mb-1" required>
+                                <input type="time" name="clock_out" value="{{ log.clock_out }}" class="form-control mb-1" required>
+                                <textarea name="task_description" class="form-control mb-1" required>{{ log.task_description }}</textarea>
+                                <button type="submit" class="btn btn-success btn-sm">Save</button>
+                                <button type="button" class="btn btn-secondary btn-sm"
+                                    onclick="document.getElementById('edit-{{ log.id }}').style.display='none'">Cancel</button>
+                            </form>
+                        </div>
 
-                            <div class="col-md-2">
-                                <input type="date" name="date"
-                                       class="form-control"
-                                       value="{{ log['date'] }}" required>
-                            </div>
-
-                            <div class="col-md-2">
-                                <input type="time" name="clock_in"
-                                       class="form-control"
-                                       value="{{ log['clock_in'] }}" required>
-                            </div>
-
-                            <div class="col-md-2">
-                                <input type="time" name="clock_out"
-                                       class="form-control"
-                                       value="{{ log['clock_out'] }}" required>
-                            </div>
-
-                            <div class="col-md-4">
-                                <textarea name="task_description"
-                                          class="form-control"
-                                          required>{{ log['task_description'] }}</textarea>
-                            </div>
-
-                            <div class="col-md-2 d-flex gap-2">
-                                <button type="submit" class="btn btn-success btn-sm w-50">Save</button>
-                                <button type="button"
-                                        class="btn btn-secondary btn-sm w-50 cancel-update-btn"
-                                        data-logid="{{ log['SNO'] }}">Cancel</button>
-                            </div>
-
+                        <!-- DELETE -->
+                        <form method="POST" action="{{ url_for('delete_log', log_id=log.id) }}" class="d-inline"
+                            onsubmit="return confirm('Are you sure?');">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                         </form>
                     </td>
                 </tr>
                 {% endfor %}
-
-                <!-- Excel-style ADD NEW ENTRY row -->
-                <tr class="table-light">
-                    <form method="POST" class="align-middle">
-
-                        <td>
-                            <input type="date" name="date" class="form-control" required>
-                        </td>
-
-                        <td>
-                            <input type="time" name="clock_in" class="form-control" required>
-                        </td>
-
-                        <td>
-                            <input type="time" name="clock_out" class="form-control" required>
-                        </td>
-
-                        <td>
-                            <textarea name="task_description"
-                                      class="form-control"
-                                      placeholder="Task description..."
-                                      required></textarea>
-                        </td>
-
-                        <td class="text-muted text-center">auto</td>
-
-                        <td colspan="2">
-                            <button type="submit" class="btn btn-success w-100">
-                                Add Entry
-                            </button>
-                        </td>
-
-                    </form>
-                </tr>
-
             </tbody>
         </table>
     </div>
-
+    {% else %}
+    <p>No logs found.</p>
     {% endif %}
 
-    <!-- SENIOR user section -->
-    {% if user_role == 'senior' %}
-    <h4 class="mt-4">View User Timesheet</h4>
+    <hr>
 
-    <form method="POST" class="row g-2 mb-3">
-        <div class="col-md-6">
-            <select name="user_id" class="form-select" required>
-                <option value="" disabled selected>Select User</option>
-                {% for u in users %}
-                <option value="{{ u['user_id'] }}">{{ u['username'] }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="col-md-3">
-            <button class="btn btn-primary w-100">View</button>
+    <!-- ================== SENIOR / ADMIN ================== -->
+    {% if user_role in ['senior', 'admin'] %}
+    <h3>View User Logs</h3>
+    <form method="POST" action="{{ url_for('dashboard') }}" class="mb-3">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label>Select User:</label>
+                <select name="user_id" class="form-select" required>
+                    <option value="">-- Select --</option>
+                    {% for u in users %}
+                    <option value="{{ u.id }}">{{ u.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary">View Logs</button>
+            </div>
         </div>
     </form>
-    {% endif %}
 
-    {% if selected_user_logs|length > 0 %}
-    <div class="card p-3 mb-4">
-        <button class="btn btn-outline-secondary mb-2" id="toggle-selected-user-btn">
-            Hide User Timesheet
-        </button>
+    {% if selected_user_logs %}
+    <h4>Time sheet of {{ selected_user_name }}</h4>
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Clock In</th>
+                    <th>Clock Out</th>
+                    <th>Duration</th>
+                    <th>Task</th>
+                    <!-- <th>Actions</th> -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in selected_user_logs %}
+                <tr>
+                    <td>{{ log.work_date }}</td>
+                    <td>{{ log.clock_in }}</td>
+                    <td>{{ log.clock_out }}</td>
+                    <td>{{ log.workhour }}</td>
+                    <td>{{ log.task_description }}</td>
+                    <!-- <td>
+                        <button type="button" class="btn btn-sm btn-warning mb-1"
+                            onclick="document.getElementById('edit-admin-{{ log.id }}').style.display='block'">
+                            Edit
+                        </button>
 
-        <div id="selected-user-logs">
-            <h5>Timesheet of {{ selected_user_name }}</h5>
+                        <div id="edit-admin-{{ log.id }}" style="display:none; margin-top:10px;">
+                            <form method="POST" action="{{ url_for('update_log', log_id=log.id) }}">
+                                <input type="date" name="date" value="{{ log.work_date }}" class="form-control mb-1" required>
+                                <input type="time" name="clock_in" value="{{ log.clock_in }}" class="form-control mb-1" required>
+                                <input type="time" name="clock_out" value="{{ log.clock_out }}" class="form-control mb-1" required>
+                                <textarea name="task_description" class="form-control mb-1" required>{{ log.task_description }}</textarea>
+                                <button type="submit" class="btn btn-success btn-sm">Save</button>
+                            </form>
+                        </div>
 
-            <table class="table table-bordered mt-2">
-                <thead class="table-light">
-                    <tr>
-                        <th>Date</th>
-                        <th>Check In</th>
-                        <th>Check Out</th>
-                        <th>Task</th>
-                        <th>Work Hours</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for log in selected_user_logs %}
-                    <tr>
-                        <td>{{ log['date'] }}</td>
-                        <td>{{ log['clock_in'] }}</td>
-                        <td>{{ log['clock_out'] }}</td>
-                        <td>{{ log['task_description'] }}</td>
-                        <td>{{ log['workhour'] }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-
-            </table>
-        </div>
+                        <form method="POST" action="{{ url_for('delete_log', log_id=log.id) }}" class="d-inline"
+                            onsubmit="return confirm('Are you sure?');">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </td> -->
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+    {% endif %}
     {% endif %}
 
 </div>
-
-<!-- JS for toggle rows -->
-<script>
-document.querySelectorAll('.toggle-update-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const id = btn.dataset.logid;
-        const row = document.getElementById('update-form-' + id);
-        row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
-    });
-});
-
-document.querySelectorAll('.cancel-update-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const id = btn.dataset.logid;
-        const row = document.getElementById('update-form-' + id);
-        row.style.display = 'none';
-    });
-});
-
-const toggleBtn = document.getElementById('toggle-selected-user-btn');
-if (toggleBtn) {
-    toggleBtn.addEventListener('click', () => {
-        const section = document.getElementById('selected-user-logs');
-        section.style.display = section.style.display === 'none' ? 'block' : 'none';
-        toggleBtn.textContent = section.style.display === 'none' 
-            ? "Show User Timesheet"
-            : "Hide User Timesheet";
-    });
-}
-</script>
 {% endblock %}
